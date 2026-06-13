@@ -14,7 +14,7 @@
 
 ## Executive Summary
 
-
+Approximately 72 hours after establishing initial access, the threat actor returned using rotated infrastructure and executed a structured attack against the internal file server. The attacker leveraged a compromised administrative account to move laterally to `azuki-fileserver01`, conducted methodical reconnaissance, and created a hidden staging directory disguised as a legitimate Windows OS path. Sensitive credential files were collected, compressed, and exfiltrated to an anonymous cloud sharing service. The attacker also deployed a renamed credential dumping tool against LSASS and established registry-based persistence using a masqueraded PowerShell payload — before attempting to erase their tracks by targeting PowerShell command history.
 
 ---
 
@@ -22,7 +22,19 @@
 
 ### **Key Indicators of Compromise (IOCs):**
 
-
+| Indicator              | Description                                       |
+| ---------------------- | --------------------------------------------------|
+| 159.26.106.98          | Attacker return — rotated C2 infrastructure       |
+| 78.141.196.6:7331      | Malware hosting server (ex.ps1 delivery)          |
+| file.io                | Anonymous exfiltration endpoint                   |
+| fileadmin              | Compromised file management admin account         |
+| azuki-fileserver01     | Lateral movement target (file server)             |
+| C:\Windows\Logs\CBS    | Hidden staging directory (mimics Windows OS path) |
+| pd.exe                 | Renamed Procdump — credential dumping tool        |
+| svchost.ps1            | Masqueraded persistence payload                   |
+| FileShareSync          | Autorun persistence key                           |
+| IT-Admin-Passwords.csv | Exfiltrated credential file                       |
+| lsass.dmp              | LSASS memory dump (credential extraction)         |
 
 ---
 
@@ -374,5 +386,72 @@ DeviceFileEvents
 
 ## 2. Investigation Summary
 
+After a 72-hour dwell period, the attacker re-entered the environment from a new IP address (`159.26.106.98`), indicating deliberate infrastructure rotation to evade detection. Using the previously compromised `fileadmin` account, they moved laterally to `azuki-fileserver01` and performed systematic enumeration — mapping network shares (`net.exe share`), remote file repositories (`net.exe view \\10.1.0.188`), user privileges (`whoami.exe /all`), and network configuration (`ipconfig.exe /all`).
 
+The attacker created a staging directory at `C:\Windows\Logs\CBS` and applied `attrib +h +s` to blend it with protected OS components. They then used `certutil.exe` — a trusted Windows binary — to download a malicious PowerShell script (`ex.ps1`) from `78.141.196.6:7331`, a known Living-off-the-Land (LotL) technique. Sensitive credential files from `C:\FileShares\IT-Admin` were copied into staging using xcopy.exe and compressed with tar.exe into `credentials.tar.gz`.
 
+To extract credentials from memory, the attacker deployed Procdump renamed as `pd.exe` and dumped the LSASS process (PID 876) to `lsass.dmp`. The complete archive was then exfiltrated via `curl.exe` to `file.io` — a zero-authentication, auto-deleting file sharing service that leaves minimal traces. Finally, the attacker established persistence by writing a `FileShareSync` autorun registry key pointing to `svchost.ps1`, a masqueraded PowerShell payload, before targeting `ConsoleHost_history.txt` in an attempt to wipe PowerShell command history.
+
+---
+
+## 3. MITRE ATT&CK Mapping
+
+| Tactic            | Technique                                | Evidence                         |
+| ----------------- | ---------------------------------------- | -------------------------------- |
+| Initial Access    | T1078 — Valid Accounts                   | fileadmin account reused         |
+| Discovery         | T1135 — Network Share Discovery          | net.exe share, net.exe view      |
+| Discovery         | T1016 - System Network Config Discovery  | ipconfig.exe /all                |
+| Discovery         | T1069 - Permission Groups Discovery      | whoami.exe /all                  |
+| Defense Evasion   | T1564.001 - Hide Artifacts: Hidden Files | attrib +h +s C:\Windows\Logs\CBS |
+| Defense Evasion   | T1036 - Masquerading                     | pd.exe, svchost.ps1              |
+| Defense Evasion   | T1070.003 - Clear Command History        | ConsoleHost_history.txt deleted  |
+| Command & Control | T1105 - Ingress Tool Transfer            | certutil.exe download            |
+| Credential Access | T1003.001 - OS Credential Dumping: LSASS | pd.exe -ma 876 lsass.dmp         |
+| Collection        | T1560.001 - Archive Collected Data       | tar.exe -czf credentials.tar.gz  |
+| Exfiltration      | T1567 - Exfiltration Over Web Service    | curl.exe → file.io               |
+| Persistence       | T1547.001 - Registry Run Keys            | FileShareSync autorun key        |
+| Lateral Movement  | T1021.002 - Remote Services: SMB         | Moved to azuki-fileserver01      |
+
+---
+
+## 4. Recommendations
+
+### Immediate Action
+
+- Disable and reset the `fileadmin` account and audit all accounts with access to `C:\FileShares\IT-Admin`.
+- Block outbound connections to `78.141.196.6` and `file.io` at the perimeter firewall.
+- Isolate `azuki-fileserver01` pending full forensic analysis.
+- Remove the `FileShareSync` registry autorun key and delete `svchost.ps1`.
+
+### Credential Hygiene
+
+- Rotate all credentials found in `IT-Admin-Passwords.csv` immediately — treat them as fully compromised.
+- Assume the LSASS dump (`lsass.dmp`) exposed all credentials cached on `azuki-fileserver01` at the time of the attack.
+- Enforce Windows Credential Guard and restrict LSASS access via attack surface reduction (ASR) rules.
+
+### Detection Hardening
+
+- Alert on `certutil.exe -urlcache` usage — this is a high-fidelity LotL indicator.
+- Monitor `attrib.exe` with `+h +s` flags targeting non-standard paths.
+- Create detection rules for `curl.exe` or `Invoke-WebRequest` POSTing to file-sharing domains (`file.io`, `transfer.sh`, `gofile.io`).
+- Flag execution of renamed tools (Procdump, Mimikatz) via hash-based or parent-process detection.
+
+### Reduce Attack Surface
+
+- Restrict `certutil.exe`, `curl.exe`, and `xcopy.exe` execution via AppLocker or WDAC policies for non-admin users.
+- Enforce PowerShell Constrained Language Mode and enable Script Block Logging.
+- Remove plaintext credential files from shared directories — replace with a secrets management solution (e.g., Azure Key Vault, HashiCorp Vault).
+
+### Architecture Improvements
+
+- Implement network segmentation to prevent lateral movement between workstations and file servers.
+- Enable just-in-time (JIT) privileged access for administrative accounts.
+- Deploy honeypot files (e.g., a fake `IT-Admin-Passwords.csv`) to detect future reconnaissance.
+
+---
+
+**Report Status:** Complete  
+
+**Next Review:** 13th December 2025
+
+**Distribution:** Cyber Range
