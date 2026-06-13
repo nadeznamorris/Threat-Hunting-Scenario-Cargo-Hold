@@ -332,7 +332,7 @@ DeviceRegistryEvents
 | project TimeGenerated, DeviceName, RegistryKey, RegistryValueName, RegistryValueData
 | order by TimeGenerated asc
 ```
-<img width="1295" height="82" alt="image" src="https://github.com/user-attachments/assets/541872c6-2278-4acf-b76c-2f3a14810a8a" />
+<img width="1315" height="92" alt="image" src="https://github.com/user-attachments/assets/541872c6-2278-4acf-b76c-2f3a14810a8a" />
 
 ---
 
@@ -350,7 +350,7 @@ DeviceRegistryEvents
 | project TimeGenerated, DeviceName, RegistryKey, RegistryValueName, RegistryValueData
 | order by TimeGenerated asc
 ```
-<img width="1295" height="82" alt="image" src="https://github.com/user-attachments/assets/541872c6-2278-4acf-b76c-2f3a14810a8a" />
+<img width="1315" height="92" alt="image" src="https://github.com/user-attachments/assets/541872c6-2278-4acf-b76c-2f3a14810a8a" />
 
 ---
 
@@ -368,7 +368,7 @@ DeviceFileEvents
 | project TimeGenerated, DeviceName, FileName, InitiatingProcessCommandLine, FolderPath
 | order by TimeGenerated asc
 ```
-<img width="1342" height="82" alt="image" src="https://github.com/user-attachments/assets/fecf71bd-dd57-4db6-82d6-260ed03c9329" />
+<img width="1412" height="92" alt="image" src="https://github.com/user-attachments/assets/fecf71bd-dd57-4db6-82d6-260ed03c9329" />
 
 ---
 
