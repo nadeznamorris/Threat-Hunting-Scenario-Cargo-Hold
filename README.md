@@ -245,7 +245,7 @@ DeviceProcessEvents
 | project TimeGenerated, DeviceName, ProcessCommandLine, FolderPath
 | order by TimeGenerated asc
 ```
-<img width="1242" height="82" alt="image" src="https://github.com/user-attachments/assets/76cb8c8f-6dc8-436f-a339-0d258e03cc01" />
+<img width="1282" height="89" alt="image" src="https://github.com/user-attachments/assets/76cb8c8f-6dc8-436f-a339-0d258e03cc01" />
 
 ---
 
