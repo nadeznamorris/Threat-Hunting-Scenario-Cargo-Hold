@@ -1,4 +1,4 @@
-# Threat-Hunting-Scenario-Cargo-Hold
+# Threat-Hunt-Scenario-Cargo-Hold
 
 ## RDP Compromise Incident
 
